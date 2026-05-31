@@ -1,18 +1,18 @@
-# Terraform
+# Terraform providers and state
 terraform/.terraform/
 terraform/.terraform.lock.hcl
 terraform/terraform.tfstate
 terraform/terraform.tfstate.backup
 terraform/*.tfvars
 
-# Java
+# Java build
 app-part2/target/
-*.war
-*.class
+**/*.war
+**/*.class
 
 # PHP
 app-part1/vendor/
-*.zip
+**/*.zip
 
 # AWS
 *.pem
@@ -21,3 +21,7 @@ app-part1/vendor/
 # IDE
 .vscode/
 *.log
+
+# Large binary files
+**/*.exe
+**/*.dll
