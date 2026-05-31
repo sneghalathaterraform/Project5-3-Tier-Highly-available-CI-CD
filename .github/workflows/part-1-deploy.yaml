@@ -1,0 +1,61 @@
+name: Part 1 - PHP to Elastic Beanstalk
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app-part1/**"
+
+env:
+  AWS_REGION: us-east-1
+  EB_APP_NAME: libraryhub-prod-php-app
+  EB_ENV_NAME: libraryhub-prod-php-env
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Create deployment zip
+        run: |
+          cd app-part1
+          zip -r ../part1-deploy.zip public/ src/ .ebextensions/
+          echo "ZIP created"
+
+      - name: Upload to S3
+        run: |
+          VERSION="v$(date +%Y%m%d%H%M%S)-${GITHUB_SHA::8}"
+          aws s3 cp part1-deploy.zip \
+            s3://libraryhub-deploy-462096274659/part1/part1-${VERSION}.zip
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "S3_KEY=part1/part1-${VERSION}.zip" >> $GITHUB_ENV
+
+      - name: Create Beanstalk application version
+        run: |
+          aws elasticbeanstalk create-application-version \
+            --application-name "$EB_APP_NAME" \
+            --version-label "$VERSION" \
+            --source-bundle S3Bucket="libraryhub-deploy-462096274659",S3Key="$S3_KEY"
+
+      - name: Deploy to Beanstalk
+        run: |
+          aws elasticbeanstalk update-environment \
+            --application-name "$EB_APP_NAME" \
+            --environment-name "$EB_ENV_NAME" \
+            --version-label "$VERSION"
+
+      - name: Wait for deployment
+        run: |
+          aws elasticbeanstalk wait environment-updated \
+            --application-name "$EB_APP_NAME" \
+            --environment-names "$EB_ENV_NAME"
+          echo "Deployment complete!"

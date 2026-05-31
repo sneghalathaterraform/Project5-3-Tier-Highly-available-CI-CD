@@ -1,5 +1,23 @@
 <?php
-require_once __DIR__ . '/../src/db.php';
+function db(): PDO {
+    static $pdo = null;
+    if ($pdo === null) {
+        $host = $_SERVER['DB_HOST']     ?? getenv('DB_HOST')     ?? '127.0.0.1';
+        $name = $_SERVER['DB_NAME']     ?? getenv('DB_NAME')     ?? 'libraryhub';
+        $user = $_SERVER['DB_USER']     ?? getenv('DB_USER')     ?? 'admin';
+        $pass = $_SERVER['DB_PASSWORD'] ?? getenv('DB_PASSWORD') ?? '';
+        $pdo = new PDO(
+            "mysql:host=$host;dbname=$name;charset=utf8mb4",
+            $user,
+            $pass,
+            [
+                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+            ]
+        );
+    }
+    return $pdo;
+}
 
 $success = false;
 $errors  = [];

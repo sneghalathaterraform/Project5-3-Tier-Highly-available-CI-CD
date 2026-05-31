@@ -1,0 +1,23 @@
+# Terraform
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/*.tfvars
+
+# Java
+app-part2/target/
+*.war
+*.class
+
+# PHP
+app-part1/vendor/
+*.zip
+
+# AWS
+*.pem
+*.key
+
+# IDE
+.vscode/
+*.log

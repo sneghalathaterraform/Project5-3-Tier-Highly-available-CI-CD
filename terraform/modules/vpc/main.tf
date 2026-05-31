@@ -108,3 +108,73 @@ resource "aws_route_table_association" "private_db" {
   subnet_id      = aws_subnet.private_db[count.index].id
   route_table_id = aws_route_table.private_db.id
 }
+
+###############################################################
+# VPC Endpoints – allows private EC2 to use SSM without NAT
+###############################################################
+
+# Security group for VPC endpoints
+resource "aws_security_group" "vpc_endpoints" {
+  name        = "${local.prefix}-vpc-endpoints-sg"
+  description = "Allow HTTPS from private subnets to VPC endpoints"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+    description = "HTTPS from VPC"
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = merge(local.tags, { Name = "${local.prefix}-vpc-endpoints-sg" })
+}
+
+# SSM endpoint – required for Session Manager
+resource "aws_vpc_endpoint" "ssm" {
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.${var.aws_region}.ssm"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = aws_subnet.private_app[*].id
+  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+  private_dns_enabled = true
+  tags                = merge(local.tags, { Name = "${local.prefix}-ssm-endpoint" })
+}
+
+# SSM Messages endpoint – required for Session Manager
+resource "aws_vpc_endpoint" "ssmmessages" {
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.${var.aws_region}.ssmmessages"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = aws_subnet.private_app[*].id
+  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+  private_dns_enabled = true
+  tags                = merge(local.tags, { Name = "${local.prefix}-ssmmessages-endpoint" })
+}
+
+# EC2 Messages endpoint – required for Session Manager
+resource "aws_vpc_endpoint" "ec2messages" {
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.${var.aws_region}.ec2messages"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = aws_subnet.private_app[*].id
+  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+  private_dns_enabled = true
+  tags                = merge(local.tags, { Name = "${local.prefix}-ec2messages-endpoint" })
+}
+
+# S3 endpoint – allows EC2 to pull WAR from S3 without NAT
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.${var.aws_region}.s3"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids   = aws_route_table.private_app[*].id
+  tags              = merge(local.tags, { Name = "${local.prefix}-s3-endpoint" })
+}

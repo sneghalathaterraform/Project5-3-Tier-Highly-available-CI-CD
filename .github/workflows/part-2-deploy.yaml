@@ -1,0 +1,72 @@
+name: Part 2 - Java to EC2 Tomcat
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app-part2/**"
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: corretto
+          cache: maven
+
+      - name: Build WAR
+        working-directory: app-part2
+        run: mvn clean package -DskipTests --batch-mode
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Upload WAR to S3
+        run: |
+          VERSION="v$(date +%Y%m%d%H%M%S)-${GITHUB_SHA::8}"
+          aws s3 cp app-part2/target/libraryhub.war \
+            s3://libraryhub-deploy-462096274659/part2/libraryhub-${VERSION}.war
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "Uploaded libraryhub-${VERSION}.war"
+
+      - name: Deploy to EC2 via SSM
+        run: |
+          ASG_INSTANCES=$(aws autoscaling describe-auto-scaling-groups \
+            --auto-scaling-group-names libraryhub-prod-asg \
+            --query "AutoScalingGroups[0].Instances[?LifecycleState=='InService'].InstanceId" \
+            --output text --region $AWS_REGION)
+
+          echo "Deploying to instances: $ASG_INSTANCES"
+
+          for INSTANCE_ID in $ASG_INSTANCES; do
+            echo "Deploying to $INSTANCE_ID"
+            aws ssm send-command \
+              --instance-ids "$INSTANCE_ID" \
+              --document-name "AWS-RunShellScript" \
+              --parameters "commands=[
+                'aws s3 cp s3://libraryhub-deploy-462096274659/part2/libraryhub-${{ env.VERSION }}.war /tmp/libraryhub-new.war',
+                'sudo systemctl stop tomcat',
+                'sudo rm -rf /opt/tomcat/webapps/libraryhub',
+                'sudo rm -f /opt/tomcat/webapps/libraryhub.war',
+                'sudo cp /tmp/libraryhub-new.war /opt/tomcat/webapps/libraryhub.war',
+                'sudo systemctl start tomcat',
+                'sleep 20',
+                'curl -s http://localhost:8080/libraryhub/health'
+              ]" \
+              --region $AWS_REGION \
+              --output text
+          done
+          echo "Deployment triggered on all instances!"
