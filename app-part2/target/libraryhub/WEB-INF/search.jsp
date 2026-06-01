@@ -15,8 +15,7 @@
 </head>
 <body class="bg-light">
 <nav class="navbar navbar-dark bg-success px-4">
-  <span class="navbar-brand fw-bold">📚 LibraryHub</span>
-  <span class="text-white-50 small">Part 2 – EC2 ALB + ASG + Java 21/Tomcat + RDS</span>
+  <span class="navbar-brand fw-bold">📚 LibraryNew</span>
 </nav>
 <div class="container py-5">
   <div class="row justify-content-center">

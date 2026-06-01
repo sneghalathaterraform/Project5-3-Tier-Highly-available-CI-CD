@@ -15,7 +15,7 @@
 </head>
 <body class="bg-light">
 <nav class="navbar navbar-dark bg-success px-4">
-  <span class="navbar-brand fw-bold">📚 LibraryHub</span>
+  <span class="navbar-brand fw-bold">📚 LibraryNew</span>
 </nav>
 <div class="container py-5">
   <div class="row justify-content-center">
