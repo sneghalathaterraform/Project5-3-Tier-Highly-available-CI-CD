@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body class="bg-light">
 <nav class="navbar navbar-dark bg-primary px-4">
-  <span class="navbar-brand fw-bold">📚 LibraryHub</span>
+  <span class="navbar-brand fw-bold">📚 LibraryProject</span>
 </nav>
 <div class="container py-5">
   <div class="row justify-content-center">
